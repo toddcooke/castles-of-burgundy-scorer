@@ -126,9 +126,16 @@ export function makePlayer(name: string): Player {
     };
 }
 
-// Total VP: base rows (1 VP per unit) + monastery VP + shield VP, applying the
-// shield doublers (#10 doubles monastery VP, #13 doubles shield VP).
-export function playerTotal(p: Player): number {
+// VP grouped by source, applying the shield doublers (#10 doubles monastery VP,
+// #13 doubles shield VP). The UI shows these subtotals; `total` is the sum.
+export interface ScoreBreakdown {
+    base: number;
+    monastery: number;
+    shields: number;
+    total: number;
+}
+
+export function scoreBreakdown(p: Player): ScoreBreakdown {
     const base = SCORE_ROWS.reduce((sum, row) => sum + p[row.key], 0);
 
     let monastery = p.monasteries.reduce(
@@ -140,7 +147,17 @@ export function playerTotal(p: Player): number {
     let shields = p.shields.reduce((sum, id) => sum + (SHIELD_VP[id] ?? 0), 0);
     if (p.shields.includes(13)) shields *= 2; // shield #13
 
-    return base + monastery + shields;
+    return { base, monastery, shields, total: base + monastery + shields };
+}
+
+// VP for a monastery holding (count × per-unit rate), ignoring shield doublers.
+export function monasteryVp(h: MonasteryHolding): number {
+    return h.count * (TILE_VP[h.tile] ?? 0);
+}
+
+// Total VP: base rows (1 VP per unit) + monastery VP + shield VP.
+export function playerTotal(p: Player): number {
+    return scoreBreakdown(p).total;
 }
 
 // Ranking order: highest total, then fewest empty hex spaces, then farthest
