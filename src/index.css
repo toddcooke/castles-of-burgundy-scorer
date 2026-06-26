@@ -1,28 +1,42 @@
-/* Minimal modern base, tuned for WCAG 3 (APCA) contrast and user preferences. */
+/* Castles of Burgundy scorer — mobile-first, modern, WCAG-minded styling.
+   Colors tuned for APCA contrast; light & dark themes via prefers-color-scheme. */
 
 :root {
   color-scheme: light dark;
 
-  /* Light theme — near-black on near-white clears APCA Lc 90+ for body text. */
-  --bg: #fbfaf8;
+  /* Light theme — near-black on warm off-white. */
+  --bg: #f6f3ee;
   --surface: #ffffff;
+  --surface-2: #faf8f4; /* subtly raised areas (steppers, holdings) */
   --text: #1a1613;
-  --muted: #4a443c;
-  --accent: #6b1f2a;        /* burgundy — Lc ~78 on --bg, ample for headings/links */
+  --muted: #5a534a;
+  --accent: #6b1f2a; /* burgundy */
+  --accent-contrast: #ffffff;
+  --accent-soft: #f3e4e1; /* tinted backgrounds keyed to the accent */
   --focus: #6b1f2a;
-  --border: #d8d2c7;
+  --border: #ddd6ca;
+  --border-strong: #c9c0b1;
+  --shadow: 0 1px 2px rgba(26, 22, 19, 0.06), 0 8px 24px rgba(26, 22, 19, 0.07);
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --tap: 44px; /* minimum comfortable touch target */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Dark theme — warm off-white on warm near-black, accent lightened to stay legible. */
-    --bg: #16130f;
-    --surface: #211c16;
+    --bg: #14110d;
+    --surface: #1f1a14;
+    --surface-2: #2a241c;
     --text: #ece7df;
-    --muted: #b6ada0;
-    --accent: #f0a3ad;      /* lighter rose — dark accents vanish on dark bg */
+    --muted: #b0a799;
+    --accent: #f0a3ad; /* lighter rose stays legible on dark */
+    --accent-contrast: #2a1115;
+    --accent-soft: #3a2429;
     --focus: #f0a3ad;
-    --border: #3a342b;
+    --border: #38322a;
+    --border-strong: #4a4136;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
   }
 }
 
@@ -32,13 +46,21 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   min-height: 100svh;
-  padding: 2rem 1.25rem;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  font-size: 1rem;           /* rem so user font-size settings scale the UI */
-  line-height: 1.6;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  font-size: 1rem; /* rem so user font-size settings scale the UI */
+  line-height: 1.5;
   color: var(--text);
   background-color: var(--bg);
   -webkit-font-smoothing: antialiased;
@@ -47,22 +69,29 @@ body {
 h1,
 h2,
 h3 {
+  margin: 0;
   line-height: 1.2;
-  text-wrap: balance;        /* avoids orphaned words in headings */
-  color: var(--accent);
+  text-wrap: balance;
 }
 
-a {
-  color: var(--accent);
-  text-decoration-thickness: 0.08em;
-  text-underline-offset: 0.15em;
-}                            /* underlined: never rely on color alone (WCAG 1.4.1) */
-
-/* Clear, consistent keyboard focus indicator. */
+/* Visible, consistent keyboard focus indicator. */
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: 4px;
+}
+
+/* Visually hidden but available to screen readers. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Honor users who ask for less motion. */
@@ -77,181 +106,552 @@ a {
   }
 }
 
-caption {
-  caption-side: bottom;
-  padding: 10px;
-  font-weight: bold;
+/* ---- Layout shell -------------------------------------------------------- */
+
+.app {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 3rem;
 }
 
-/* Rank medals — fixed metallic colors with dark text (works in light & dark
-   themes); the place label ("1ST"…) means rank is never conveyed by color alone. */
-.medal {
+.app__header {
+  margin-bottom: 1rem;
+}
+
+.app__header h1 {
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  letter-spacing: -0.01em;
+  color: var(--accent);
+}
+
+.app__subtitle {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+/* Sticky toolbar keeps Add/Clear reachable as the page scrolls. */
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0 -1rem 1.25rem;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ---- Buttons ------------------------------------------------------------- */
+
+.btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Pointy-top hexagon. Height ≈ 1.155 × width keeps all six edges equal
-     (a square box would make the top/bottom edges shorter than the sides). */
-  width: 3rem;
-  height: 3.46rem;
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  color: #2a2118;
-  font-weight: 800;
-  font-size: 0.78rem;
-  letter-spacing: 0.03em;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4); /* engraved look */
-  /* Bevel: top shine, bottom shade, thin rim. Inset shadows stay inside the clip. */
-  box-shadow:
-    inset 0 2px 3px rgba(255, 255, 255, 0.5),
-    inset 0 -4px 5px rgba(0, 0, 0, 0.28),
-    inset 0 0 0 2px rgba(0, 0, 0, 0.08);
-  /* Outer drop shadow follows the hex outline (a box-shadow would be clipped away). */
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
-}
-
-/* Monasteries cell: each player's owned tiles (labelled line + count + remove)
-   and an "add" dropdown that only lists still-unclaimed tiles. */
-/* Grid so name / unit / count / remove line up in columns across rows. */
-.monastery-cell ul {
-  list-style: none;
-  margin: 0 0 0.4rem;
-  padding: 0;
-  display: grid;
-  grid-template-columns: auto auto auto auto;
-  align-items: center;
-  gap: 0.35rem 0.5rem;
-  width: max-content;
-  max-width: 100%;
-}
-
-.monastery-cell li {
-  display: contents;
-}
-
-/* Each owned tile as a labelled line: "Monastery 16 · matching buildings: [5] ✕". */
-.monastery-cell .m-name {
-  font-weight: 700;
-}
-
-.monastery-cell .m-unit {
-  color: var(--muted);
-  min-width: 0;
-  max-width: 12rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.monastery-cell .m-vp {
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.monastery-cell .m-remove {
-  min-width: 24px;
-  min-height: 24px;
-  margin: 0;
-  padding: 0.1rem 0.4rem;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.monastery-cell input[type="number"] {
-  width: 3.4rem;
-  font-size: 16px;
-  padding: 0.2rem 0.3rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  color: var(--text);
-}
-
-.monastery-cell select {
-  font-size: 16px;
-  min-height: 36px;
-  max-width: 100%;
-  padding: 0.25rem 0.4rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
-}
-
-.medal.rank-1 { background: radial-gradient(circle at 33% 28%, #f7e9ad, #d4af37 48%, #9b7d1f); } /* gold */
-.medal.rank-2 { background: radial-gradient(circle at 33% 28%, #f5f7f9, #c2c6cc 48%, #888d94); } /* silver */
-.medal.rank-3 { background: radial-gradient(circle at 33% 28%, #e7b98c, #c08552 48%, #8a5a30); } /* bronze */
-.medal.rank-4 { background: radial-gradient(circle at 33% 28%, #c4cbd2, #9098a0 48%, #646b72); } /* iron */
-.medal.rank-other { background: radial-gradient(circle at 33% 28%, #ededed, #cfcfcf 48%, #a6a6a6); }
-
-/* Actions */
-button {
-  font-size: 16px;            /* >=16px avoids iOS focus zoom */
-  min-height: 44px;           /* comfortable touch target */
-  padding: 0.5rem 0.9rem;
-  margin: 0 0.5rem 1rem 0;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  min-height: var(--tap);
+  padding: 0.5rem 1.1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    transform 0.05s ease;
 }
 
-button:disabled {
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.btn--sm {
+  min-height: 38px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.9rem;
+}
+
+.btn:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
 
-/* Horizontal scroll so wide tables never break the page layout on phones. */
-.table-scroll {
-  max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+/* Compact square icon button (remove). Meets the 24px target-size minimum. */
+.icon-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
 }
 
-.table-scroll table {
-  border-collapse: collapse;
+.icon-btn:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
-.table-scroll th,
-.table-scroll td {
-  padding: 0.4rem 0.6rem;
-  border: 1px solid var(--border);
-  text-align: left;
-  vertical-align: middle;
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
-/* Keep the category labels visible while scrolling player columns sideways. */
-.table-scroll tr > :first-child {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: var(--bg);
-  box-shadow: 1px 0 0 var(--border); /* divider that survives sticky scrolling */
+.icon-btn--sm {
+  width: 28px;
+  height: 28px;
+  font-size: 0.85rem;
 }
 
-.table-scroll input {
-  font-size: 16px;            /* prevent iOS zoom on focus */
-  padding: 0.3rem 0.4rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+/* ---- Standings summary --------------------------------------------------- */
+
+.standings {
+  margin-bottom: 1.25rem;
+  padding: 0.9rem;
   background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.standings__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.standings__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* Each row layers a proportional score bar behind the place / name / total. */
+.standing {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.standing__bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  min-width: 2px;
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  transition: width 0.25s ease;
+}
+
+.standing > :not(.standing__bar) {
+  position: relative; /* lift content above the bar */
+  z-index: 1;
+}
+
+.standing__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.standing__total {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Small ranked badge (the place number) with the same metallic palette as medals. */
+.pip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  color: #2a2118;
+  font-weight: 800;
+  font-size: 0.85rem;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.25),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* ---- Player grid --------------------------------------------------------- */
+
+.players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 22rem));
+  justify-content: center;
+  gap: 1rem;
+  align-items: start;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.card--leader {
+  border-color: #d4af37;
+  box-shadow:
+    0 0 0 1px #d4af37,
+    var(--shadow);
+}
+
+.card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.65rem 0.65rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.card__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 1.05rem; /* >=16px avoids iOS focus zoom */
+  font-weight: 700;
+  padding: 0.4rem 0.5rem;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+}
+
+.card__name:hover {
+  border-color: var(--border);
+}
+
+.card__name:focus {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  outline: none;
+}
+
+/* ---- Result band (medal + total) ---------------------------------------- */
+
+.card__result {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.card__total {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.card__total-num {
+  font-size: 2.4rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.card__total-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Rank medals — fixed metallic colors with dark text (legible in both themes);
+   the place label ("1ST"…) means rank is never conveyed by color alone. */
+.medal {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Pointy-top hexagon: height ≈ 1.155 × width keeps all six edges equal. */
+  width: 2.9rem;
+  height: 3.35rem;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  color: #2a2118;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.5),
+    inset 0 -4px 5px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 2px rgba(0, 0, 0, 0.08);
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
+}
+
+.medal.rank-1,
+.pip.rank-1 {
+  background: radial-gradient(circle at 33% 28%, #f7e9ad, #d4af37 48%, #9b7d1f);
+} /* gold */
+.medal.rank-2,
+.pip.rank-2 {
+  background: radial-gradient(circle at 33% 28%, #f5f7f9, #c2c6cc 48%, #888d94);
+} /* silver */
+.medal.rank-3,
+.pip.rank-3 {
+  background: radial-gradient(circle at 33% 28%, #e7b98c, #c08552 48%, #8a5a30);
+} /* bronze */
+.medal.rank-4,
+.pip.rank-4 {
+  background: radial-gradient(circle at 33% 28%, #c4cbd2, #9098a0 48%, #646b72);
+} /* iron */
+.medal.rank-other,
+.pip.rank-other {
+  background: radial-gradient(circle at 33% 28%, #ededed, #cfcfcf 48%, #a6a6a6);
+}
+
+/* ---- Card sections ------------------------------------------------------- */
+
+.card__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem;
+}
+
+.card__section + .card__section {
+  border-top: 1px solid var(--border);
+}
+
+.card__section--tiebreak {
+  background: var(--accent-soft);
+}
+
+.section-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.section-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.section-sum {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Marks a section whose subtotal is doubled by a shield (#10 / #13). */
+.x2-badge {
+  padding: 0.05rem 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--accent-contrast);
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+/* ---- Labelled stepper field --------------------------------------------- */
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.field__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.95rem;
   color: var(--text);
 }
 
-.table-scroll input[type="number"] {
-  width: 4.5rem;
+.stepper {
+  flex: none;
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  overflow: hidden;
 }
 
-.table-scroll input[type="text"] {
-  width: 7rem;
-}
-
-/* Compact per-player remove button in the column header.
-   Kept to a >=24px target to satisfy WCAG target-size minimum. */
-.remove-player {
-  min-width: 24px;
-  min-height: 24px;
-  margin: 0 0 0 0.35rem;
-  padding: 0.1rem 0.4rem;
-  font-size: 14px;
+.stepper__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  min-height: var(--tap);
+  padding: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
   line-height: 1;
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.stepper__btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.stepper__btn:disabled {
+  color: var(--muted);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stepper__input {
+  width: 3.25rem;
+  min-height: var(--tap);
+  padding: 0;
+  text-align: center;
+  font-size: 1.05rem; /* >=16px avoids iOS focus zoom */
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--surface);
+  border: none;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+/* Hide native number spinners — the −/+ buttons replace them. */
+.stepper__input::-webkit-outer-spin-button,
+.stepper__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.stepper__input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ---- Holdings (monasteries / shields) ----------------------------------- */
+
+.holdings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.holding {
+  padding: 0.55rem 0.6rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.holding__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.holding__name {
+  flex: 1 1 auto;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.holding__vp {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.holding__body {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.45rem;
+}
+
+.holding__meta {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.holding__effect {
+  margin: 0.3rem 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+/* ---- Add control (styled <select>) -------------------------------------- */
+
+.add-control {
+  display: block;
+}
+
+.add-control select {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0.5rem 0.7rem;
+  font-size: 1rem; /* >=16px avoids iOS focus zoom */
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.add-control select:hover {
+  border-color: var(--accent);
+  border-style: solid;
 }
